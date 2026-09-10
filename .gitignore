@@ -1,0 +1,22 @@
+# Visual Studio / .NET build output
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Local tools and recovered binaries are not part of the public source
+tools/
+upstream/
+
+# Runtime data, logs, and local backups
+Items/
+*.log
+*.tmp
+*.bak
+backup-*/
+
+# OS metadata
+Thumbs.db
+Desktop.ini
+.DS_Store
