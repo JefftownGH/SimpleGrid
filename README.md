@@ -1,5 +1,11 @@
 # SimpleGrid（简单格子）
 
+[中文](#中文) | [English](#english)
+
+<a id="中文"></a>
+
+## 中文
+
 一个轻量、开源的 Windows 桌面围栏工具，基于 [Twometer/NoFences](https://github.com/Twometer/NoFences) 二次开发。
 
 SimpleGrid（简单格子）用半透明格子整理桌面上的程序快捷方式、文件和文件夹。它在 NoFences 的轻量基础上，重点改善了高 DPI、图标加载、快捷方式启动、拖拽排序、数据可靠性和长期维护体验。
@@ -64,7 +70,7 @@ SimpleGrid（简单格子）用半透明格子整理桌面上的程序快捷方�
 - 运行预编译版本时需要 .NET Framework 4.8。
 - 从源码构建时需要 .NET SDK 和 .NET Framework 4.8 Developer Pack。
 
-目前项目尚未发布正式 GitHub Release 安装包。第一次公开发布完成后，会在仓库的 **Releases** 页面提供下载；在此之前可以按下方步骤从源码构建。
+预编译版本可从 [GitHub Releases](https://github.com/followdd/SimpleGrid/releases) 下载；当前稳定版本为 [v1.0.0](https://github.com/followdd/SimpleGrid/releases/tag/v1.0.0)。也可以按下方步骤从源码构建。
 
 ## 从源码构建
 
@@ -141,3 +147,149 @@ SimpleGrid 的用户数据不保存在 Git 仓库或安装目录，而位于：
 ## 许可证与署名
 
 本项目使用 [MIT License](LICENSE)。原始项目版权归 Twometer 所有；2026 年以来的增强修改由 DD 维护，并在 MIT 许可证允许的范围内发布。分发本项目或其重要部分时，请保留许可证和原始版权声明。
+
+<a id="english"></a>
+
+## English
+
+SimpleGrid is a lightweight, open-source desktop organizer for Windows, developed from [Twometer/NoFences](https://github.com/Twometer/NoFences).
+
+It organizes application shortcuts, files, and folders into translucent desktop grids. Building on the lightweight foundation of NoFences, SimpleGrid focuses on better high-DPI behavior, icon loading, shortcut launching, drag-and-drop ordering, data reliability, and long-term maintainability.
+
+> This is an unofficial, community-maintained project. It is not affiliated with or endorsed by the upstream author. The project remains under the MIT License and retains the upstream copyright notice.
+
+Maintainer: **DD**
+
+### A personal note
+
+I started with no coding background—just an ordinary person beginning from zero. Every part of SimpleGrid was built step by step with the help of Codex. I am grateful to live in an era when someone who does not know programming can still turn an idea into a real, usable application. I am equally grateful to every open-source project that shares its work freely, and to every programmer whose code lights the way for those who follow. This small project is my tribute to the spirit of open source.
+
+### Why “SimpleGrid”?
+
+The name states the goal plainly: organize the Windows desktop with grids that are simple, lightweight, and free of unnecessary overhead. The repository uses the English name `SimpleGrid` to make it easy to search, type, and share worldwide.
+
+The project has completed a full branding migration. The executable, process, assembly, code namespace, project file, default installation directory, and user-data directory all use `SimpleGrid`. On first launch, if the new directory has no fences, the application copies legacy data from `%LOCALAPPDATA%\NoFences` and rewrites absolute XML paths that point to the old `NoFences\Items` directory. The old directory is kept for rollback.
+
+### Why this version exists
+
+The upstream NoFences project provides a clean and practical foundation for desktop fences, but extended use reveals several limitations: icons cannot be freely reordered, moving items between fences is awkward, high-DPI scaling can cause incorrect clicks or drops, Shell icons and shortcuts can block the interface, configuration saving lacks failure protection, and fence contents remain dependent on external source folders.
+
+SimpleGrid keeps the lightweight Windows Forms architecture while addressing these everyday issues. It also packages the recovered, maintainable source code, technical documentation, and upstream snapshot into a project ready for public collaboration.
+
+### Differences from upstream
+
+| Capability | Upstream | SimpleGrid |
+| --- | --- | --- |
+| Icon ordering within a fence | No free insertion ordering | Drag-to-reorder with insertion-position feedback |
+| Moving between fences | Relies on external drag and drop | Drag directly into another unlocked fence |
+| High-DPI hit testing | Drawing and hit testing may use different column counts | One shared layout algorithm from 100% to 200% DPI |
+| Missing paths | Visible positions and data indices can become misaligned | Explicit mapping from visible items to model indices |
+| Shortcut launching | Primarily relies on Windows Shell | Resolves `.lnk` files in the background and can launch target EXEs directly |
+| Icons and thumbnails | May block the UI thread | Background loading, shared throttling, and a thread-safe cache |
+| Right-click removal | Relies on the Shell menu and may lose the target | Fast menu, stable target capture, and duplicate-record cleanup |
+| File location | No dedicated action | Opens File Explorer with the item selected |
+| External item storage | Keeps long-term references to original paths | Copies dropped items into SimpleGrid's own `Items` repository |
+| Configuration saving | Direct writes have higher corruption risk | Writes a temporary file in the same directory, then replaces atomically |
+| Fault isolation | One damaged configuration may prevent startup | Logs a failed fence and continues loading the others |
+| Resource management | Potential GDI/cache disposal issues | Explicitly disposes icons, bitmaps, fonts, and thumbnail resources |
+
+See [docs/UPSTREAM-DIFFERENCES.md](docs/UPSTREAM-DIFFERENCES.md) for the complete implementation comparison and supporting evidence.
+
+### Features
+
+- Create, delete, rename, move, and resize desktop fences.
+- Lock fences to prevent accidental movement or content changes.
+- Auto-collapse fences so that only the title bar remains visible.
+- Display application icons, folder icons, and image thumbnails.
+- Reorder items within a fence, with a blue insertion line showing the destination.
+- Move items directly between unlocked fences.
+- Drag files, folders, and shortcuts from File Explorer or the desktop.
+- Automatically copy external items to `%LOCALAPPDATA%\SimpleGrid\Items`, removing the dependency on the original organization folder.
+- Quickly remove fence records from the context menu; use `Shift + right-click` for the complete Windows Shell menu.
+- Choose “Open in File Explorer” to locate and select an item.
+- Automatically persist layout, size, lock state, and item order.
+- Run as a single instance and restore the desktop layer after Windows Explorer restarts.
+
+### System requirements
+
+- Windows 10 or Windows 11 (x64).
+- .NET Framework 4.8 for the prebuilt version.
+- .NET SDK and the .NET Framework 4.8 Developer Pack when building from source.
+
+Download the prebuilt application from [GitHub Releases](https://github.com/followdd/SimpleGrid/releases). The current stable release is [v1.0.0](https://github.com/followdd/SimpleGrid/releases/tag/v1.0.0). You can also build it from source as described below.
+
+### Build from source
+
+```powershell
+dotnet restore .\source\SimpleGrid.csproj
+dotnet build .\source\SimpleGrid.csproj -c Release --no-restore
+```
+
+Build output:
+
+```text
+source\bin\Release\net48\
+```
+
+Keep the dependency DLLs in the output directory with `SimpleGrid.exe`; do not copy the executable alone. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed build, deployment, and verification instructions.
+
+### Basic usage
+
+1. Launch `SimpleGrid.exe`. On the first run, if no configuration exists, the application creates a default fence.
+2. Right-click an empty area of a fence to create, rename, lock, collapse, or delete a fence.
+3. Drag a file, folder, or shortcut into a fence. SimpleGrid creates and stores its own copy in the `Items` repository.
+4. Drag an icon to reorder it within the current fence or move it to another unlocked fence.
+5. Right-click an icon to remove its fence record quickly or locate it in File Explorer.
+6. Use `Shift + right-click` on an icon to open the complete native Windows context menu.
+
+“Delete item” removes the item record from the fence; it does not delete the physical file stored in the `Items` repository. This favors recoverability. Automatic cleanup of unreferenced items has not yet been implemented.
+
+### Data location
+
+SimpleGrid stores user data outside the Git repository and installation directory:
+
+```text
+%LOCALAPPDATA%\SimpleGrid
+```
+
+Inside this directory:
+
+- Each GUID-named subdirectory represents a fence; its configuration file is `__fence_metadata.xml`.
+- `fences.index` stores the list of fence GUIDs so all fences can load reliably even in restricted sign-in tasks.
+- `Items\<random-id>\` stores SimpleGrid-owned copies of dropped items.
+- `app_diag.log` records startup, shutdown, and exception diagnostics.
+
+Do not overwrite this directory when uninstalling, upgrading, or deploying manually. Backing up the whole directory preserves both the fence layout and stored items.
+
+### Project structure
+
+| Directory | Purpose |
+| --- | --- |
+| `source/` | Maintained source code and the source of truth for implementation |
+| `docs/` | Architecture, upstream differences, build and deployment guidance, and change history |
+
+Local recovery tools, build output, runtime logs, user layouts, and personal file paths are excluded from the public repository through `.gitignore`.
+
+### Known limitations
+
+- Windows x64 and .NET Framework 4.8 only.
+- Item paths are still checked during drawing; disconnected drives or slow network paths may affect an individual frame.
+- The icon and thumbnail cache does not yet have an LRU size limit.
+- Removing a fence record does not automatically clean up unreferenced copies from `Items`.
+- Automated CI, an installer, and a signed release pipeline have not yet been established.
+- Desktop-layer windows are difficult for general UI automation tools to enumerate, so drag-and-drop feel still requires manual testing on a real desktop.
+
+### Development and contributions
+
+Issues and pull requests are welcome. When reporting a problem, please include:
+
+- Your Windows version and display scaling percentage.
+- The shortest steps that reproduce the issue.
+- Relevant lines from `%LOCALAPPDATA%\SimpleGrid\app_diag.log`; remove personal paths and other private information before uploading.
+- A redacted screenshot if the issue involves layout.
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the architecture, data format, key implementation details, and verification checklist. See [docs/CHANGELOG.md](docs/CHANGELOG.md) for version history.
+
+### License and attribution
+
+SimpleGrid is distributed under the [MIT License](LICENSE). The original project is copyright Twometer. Enhancements made since 2026 are maintained by DD and distributed under the terms of the MIT License. When redistributing this project or a substantial part of it, retain the license and original copyright notice.
