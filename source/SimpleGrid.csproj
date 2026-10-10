@@ -1,14 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>SimpleGrid</AssemblyName>
-    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>True</UseWindowsForms>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup>
-    <LangVersion>14.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
   </PropertyGroup>
@@ -17,10 +16,23 @@
     <RootNamespace />
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
-  <ItemGroup />
+  <PropertyGroup>
+    <!-- WFAC010 建议把高 DPI 配置从 app.manifest 移到 ApplicationHighDpiMode 项目属性。
+         这里刻意不用：manifest 的 PerMonitorV2 声明自 net48 时代起就是本项目的唯一 DPI 来源，
+         迁移到 net8 期间不改动 DPI 语义，避免引入隐蔽的渲染差异。 -->
+    <NoWarn>WFAC010</NoWarn>
+    <AssemblyTitle>SimpleGrid</AssemblyTitle>
+    <AssemblyDescription>Lightweight Windows desktop organizer derived from Twometer/NoFences</AssemblyDescription>
+    <Company>DD</Company>
+    <Product>SimpleGrid</Product>
+    <Copyright>Copyright © 2024 Twometer; modifications © 2026 DD</Copyright>
+    <Guid>9b7ec27e-0066-4455-987c-6dc88c4bee54</Guid>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
+    <InformationalVersion>1.6.0.0</InformationalVersion>
+    <ComVisible>false</ComVisible>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml" />
-    <PackageReference Include="System.Resources.Extensions" Version="10.0.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
 </Project>

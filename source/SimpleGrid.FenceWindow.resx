@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -32,15 +32,15 @@
   <data name="&gt;&gt;exitToolStripMenuItem.Type" xml:space="preserve"><value>System.Windows.Forms.ToolStripMenuItem, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
   <data name="&gt;&gt;exitToolStripMenuItem.Name" xml:space="preserve"><value>exitToolStripMenuItem</value></data>
   <data name="$this.Text" xml:space="preserve"><value>New Fence</value></data>
-  <data name="minifyToolStripMenuItem.Text" xml:space="preserve"><value>Minify</value></data>
+  <data name="minifyToolStripMenuItem.Text" xml:space="preserve"><value>自动折叠</value></data>
   <data name="minifyToolStripMenuItem.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
 ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="exitToolStripMenuItem.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
-ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="exitToolStripMenuItem.Text" xml:space="preserve"><value>Remove Fence</value></data>
+ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="exitToolStripMenuItem.Text" xml:space="preserve"><value>删除围栏</value></data>
   <data name="$this.ClientSize" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
-ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAFIBAABmAAAACw==</value></data><data name="newFenceToolStripMenuItem.Text" xml:space="preserve"><value>New Fence</value></data>
+ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAFIBAABmAAAACw==</value></data><data name="newFenceToolStripMenuItem.Text" xml:space="preserve"><value>新建围栏</value></data>
   <data name="newFenceToolStripMenuItem.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
 ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="&gt;&gt;newFenceToolStripMenuItem.Name" xml:space="preserve"><value>newFenceToolStripMenuItem</value></data>
@@ -49,7 +49,7 @@ ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></da
   <data name="&gt;&gt;toolStripSeparator1.Name" xml:space="preserve"><value>toolStripSeparator1</value></data>
   <data name="lockedToolStripMenuItem.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
-ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="lockedToolStripMenuItem.Text" xml:space="preserve"><value>Lock</value></data>
+ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="lockedToolStripMenuItem.Text" xml:space="preserve"><value>锁定</value></data>
   <data name="appContextMenu.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
 ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKEAAACkAAAACw==</value></data><data name="&gt;&gt;renameToolStripMenuItem.Name" xml:space="preserve"><value>renameToolStripMenuItem</value></data>
@@ -58,8 +58,8 @@ ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKEAAACkAAAACw==</value></da
   <data name="&gt;&gt;deleteItemToolStripMenuItem.Name" xml:space="preserve"><value>deleteItemToolStripMenuItem</value></data>
   <data name="renameToolStripMenuItem.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
-ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="renameToolStripMenuItem.Text" xml:space="preserve"><value>Rename</value></data>
-  <data name="deleteItemToolStripMenuItem.Text" xml:space="preserve"><value>Delete item</value></data>
+ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="renameToolStripMenuItem.Text" xml:space="preserve"><value>重命名</value></data>
+  <data name="deleteItemToolStripMenuItem.Text" xml:space="preserve"><value>删除项目</value></data>
   <data name="deleteItemToolStripMenuItem.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
 ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="deleteItemToolStripMenuItem.Font" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
@@ -68,7 +68,7 @@ ZW0uRHJhd2luZy5Gb250BAAAAAROYW1lBFNpemUFU3R5bGUEVW5pdAEABAQLGFN5c3RlbS5EcmF3
 aW5nLkZvbnRTdHlsZQIAAAAbU3lzdGVtLkRyYXdpbmcuR3JhcGhpY3NVbml0AgAAAAIAAAAGAwAA
 AAhTZWdvZSBVSQAAEEEF/P///xhTeXN0ZW0uRHJhd2luZy5Gb250U3R5bGUBAAAAB3ZhbHVlX18A
 CAIAAAABAAAABfv///8bU3lzdGVtLkRyYXdpbmcuR3JhcGhpY3NVbml0AQAAAAd2YWx1ZV9fAAgC
-AAAAAwAAAAs=</value></data><data name="titleSizeToolStripMenuItem.Text" xml:space="preserve"><value>Title size...</value></data>
+AAAAAwAAAAs=</value></data><data name="titleSizeToolStripMenuItem.Text" xml:space="preserve"><value>标题栏高度...</value></data>
   <data name="titleSizeToolStripMenuItem.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
 ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAKAAAAAWAAAACw==</value></data><data name="&gt;&gt;minifyToolStripMenuItem.Name" xml:space="preserve"><value>minifyToolStripMenuItem</value></data>

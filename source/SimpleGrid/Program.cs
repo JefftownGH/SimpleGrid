@@ -26,6 +26,8 @@ internal static class Program
 		Application.ApplicationExit += delegate
 		{
 			DiagLog.Log("Application.ApplicationExit 触发（消息循环即将结束）");
+			// 必须释放全局热键，否则注册的 WM_HOTKEY 会残留到进程结束
+			GlobalHotkeyManager.Dispose();
 		};
 		AppDomain.CurrentDomain.ProcessExit += delegate
 		{
@@ -38,13 +40,15 @@ internal static class Program
 			{
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(defaultValue: false);
+				TrayController.Initialize();
 				int loadedFenceCount = FenceManager.Instance.LoadFences();
 				if (loadedFenceCount == 0)
 				{
-					FenceManager.Instance.CreateFence("First fence");
+					FenceManager.Instance.CreateFence("我的围栏");
 				}
 				Application.Run();
 				DiagLog.Log("Application.Run() 返回（正常走完消息循环）");
+				GlobalHotkeyManager.Dispose();
 			}
 			else
 			{

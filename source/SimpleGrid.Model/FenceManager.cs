@@ -85,6 +85,8 @@ public class FenceManager
 				}
 				if (fenceInfo != null)
 				{
+					// 旧版本 XML 没有 ScreenX/ScreenY，这里补齐并标记待重排
+					fenceInfo.EnsureScreenMetrics();
 					new FenceWindow(fenceInfo).Show();
 					loadedCount++;
 				}
@@ -105,7 +107,9 @@ public class FenceManager
 			PosX = 100,
 			PosY = 250,
 			Height = 300,
-			Width = 300
+			Width = 300,
+			ScreenX = System.Windows.Forms.Screen.PrimaryScreen?.Bounds.Width ?? 1920,
+			ScreenY = System.Windows.Forms.Screen.PrimaryScreen?.Bounds.Height ?? 1080
 		};
 		UpdateFence(fenceInfo);
 		new FenceWindow(fenceInfo).Show();

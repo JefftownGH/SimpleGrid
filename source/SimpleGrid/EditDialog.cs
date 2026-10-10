@@ -57,7 +57,7 @@ public class EditDialog : Form
 		componentResourceManager.ApplyResources(this.tbName, "tbName");
 		this.tbName.Name = "tbName";
 		componentResourceManager.ApplyResources(this.btnOk, "btnOk");
-		this.btnOk.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+		this.btnOk.DialogResult = System.Windows.Forms.DialogResult.OK;
 		this.btnOk.Name = "btnOk";
 		this.btnOk.UseVisualStyleBackColor = true;
 		this.btnOk.Click += new System.EventHandler(btnOk_Click);

@@ -61,6 +61,9 @@ public class WindowUtil
 
 	public static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
 
+	/// <summary>HWND_TOPMOST：置于最顶层，用于拖动对齐辅助线覆盖层。</summary>
+	public static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+
 	public const int WM_WINDOWPOSCHANGING = 70;
 
 	[DllImport("user32.dll")]

@@ -85,6 +85,8 @@ public class FenceWindow : Form
 
 	private int scrollOffset;
 
+	private TextBox titleEditBox;
+
 	private int lastMouseInvalidateTick;
 
 	private readonly List<RenderedItem> renderedItems = new List<RenderedItem>();
@@ -97,9 +99,15 @@ public class FenceWindow : Form
 
 	private readonly ThumbnailProvider thumbnailProvider = new ThumbnailProvider();
 
+	/// <summary>拖动对齐辅助线覆盖层。所有围栏共用同一个实例，避免多层叠加互相遮挡。</summary>
+	private static readonly SnapOverlay snapOverlay = new SnapOverlay();
+
 	private readonly FenceInfo fenceInfo;
 
 	private static readonly int WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated");
+
+	/// <summary>拖动过程中持续发送，用于计算对齐吸附并显示辅助线。</summary>
+	private const int WM_MOVING = 0x0216;
 
 	private readonly object saveLock = new object();
 
@@ -189,17 +197,39 @@ public class FenceWindow : Form
 	{
 		titleFont?.Dispose();
 		iconFont?.Dispose();
-		using (FontFamily family = new FontFamily("Microsoft YaHei UI"))
+		using (FontFamily family = ResolveUiFontFamily())
 		{
 			titleFont = new Font(family, 8.5f, GraphicsUnit.Point);
 			iconFont = new Font(family, 7f, GraphicsUnit.Point);
 		}
 	}
 
+	// 按优先级挑选一款系统一定存在的字体。原先硬编码 "Microsoft YaHei UI"，
+	// 在未安装中文字体的 Windows 上会抛 ArgumentException，且该调用发生在
+	// FenceWindow 构造函数里 —— 缺字体等于程序完全无法启动。
+	private static FontFamily ResolveUiFontFamily()
+	{
+		string[] candidates = { "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "Tahoma", "Arial" };
+		foreach (string name in candidates)
+		{
+			try
+			{
+				return new FontFamily(name);
+			}
+			catch (ArgumentException)
+			{
+				// 该字体未安装，试下一个。
+			}
+		}
+		// 理论不可达：Windows 字体目录下总有可用字体。
+		return SystemFonts.DefaultFont.FontFamily;
+	}
+
 	public FenceWindow(FenceInfo fenceInfo)
 	{
 		this.fenceInfo = fenceInfo ?? throw new ArgumentNullException(nameof(fenceInfo));
 		InitializeComponent();
+		TrayController.Register(this);
 		DropShadow.ApplyShadows(this);
 		BlurUtil.EnableBlur(base.Handle);
 		WindowUtil.HideFromAltTab(base.Handle);
@@ -208,6 +238,7 @@ public class FenceWindow : Form
 		logicalTitleHeight = ((fenceInfo.TitleHeight < 16 || fenceInfo.TitleHeight > 100) ? 35 : fenceInfo.TitleHeight);
 		titleHeight = S(logicalTitleHeight);
 		base.MouseWheel += FenceWindow_MouseWheel;
+		base.MouseCaptureChanged += FenceWindow_MouseCaptureChanged;
 		thumbnailProvider.IconThumbnailLoaded += ThumbnailProvider_IconThumbnailLoaded;
 		HiResIcons.IconLoaded += HiResIcons_IconLoaded;
 		ReloadFonts();
@@ -216,7 +247,12 @@ public class FenceWindow : Form
 		base.Location = new Point(S(fenceInfo.PosX), S(fenceInfo.PosY));
 		base.Width = S(fenceInfo.Width);
 		base.Height = S(fenceInfo.Height);
+		// 必须等真实宽高确定后再生成圆角 Region：InitializeComponent 阶段用的是窗体默认尺寸，
+		// 若那时就裁剪，后续设置的实际尺寸会被裁掉一大块。
+		UpdateRoundedRegion();
 		prevHeight = base.Height;
+		// 参与拖动对齐：提供当前屏幕矩形，供 SnapManager 计算吸附目标
+		SnapManager.Register(base.Handle, GetScreenBounds);
 		lockedToolStripMenuItem.Checked = fenceInfo.Locked;
 		minifyToolStripMenuItem.Checked = fenceInfo.CanMinify;
 		Minify();
@@ -225,13 +261,35 @@ public class FenceWindow : Form
 
 	protected override void WndProc(ref Message m)
 	{
+		// WM_DPICHANGED：换显示器或改缩放后重算缩放比，并按新 DPI 重新落地位置尺寸
 		if (m.Msg == 736)
 		{
 			base.WndProc(ref m);
 			ComputeScale();
 			titleHeight = S(logicalTitleHeight);
 			ReloadFonts();
+			// lParam 里是系统建议的新矩形，按它重定位，避免围栏停在屏幕外
+			if (m.LParam.ToInt64() != 0)
+			{
+				Rectangle suggested = (Rectangle)Marshal.PtrToStructure(m.LParam, typeof(Rectangle));
+				base.Location = new Point(suggested.X, suggested.Y);
+				base.Width = Math.Max(S(160), suggested.Width);
+				base.Height = Math.Max(S(120), suggested.Height);
+			}
+			UpdateRoundedRegion();
+			fenceInfo.PosX = (int)Math.Round((float)base.Location.X / s);
+			fenceInfo.PosY = (int)Math.Round((float)base.Location.Y / s);
+			fenceInfo.Width = (int)Math.Round((float)base.Width / s);
+			fenceInfo.Height = (int)Math.Round((float)(isMinified ? prevHeight : base.Height) / s);
+			Save();
 			Invalidate(invalidateChildren: true);
+			return;
+		}
+		// WM_DISPLAYCHANGE：分辨率变化后标记需要重新适配，由托盘/定时器统一重排
+		if (m.Msg == 0x007E)
+		{
+			base.WndProc(ref m);
+			fenceInfo.NeedsRelayout = true;
 			return;
 		}
 		if (m.Msg == 131)
@@ -253,6 +311,24 @@ public class FenceWindow : Form
 				return;
 			}
 		}
+		if (m.Msg == 163)
+		{
+			long num = m.LParam.ToInt64();
+			if (PointToClient(new Point(unchecked((short)num), unchecked((short)(num >> 16)))).Y < titleHeight && !lockedToolStripMenuItem.Checked)
+			{
+				BeginRenameTitle();
+				return;
+			}
+		}
+		// WM_MOVING：拖动过程中每移动一次都会发送。
+		// lParam 指向一个 RECT，写回它即可修正窗口位置（比 WM_MOVE 更可靠，
+		// 因为它发生在移动循环内部，不会与用户输入打架）。
+		if (m.Msg == WM_MOVING)
+		{
+			base.WndProc(ref m);
+			HandleMoving(m.LParam);
+			return;
+		}
 		if (m.Msg == WM_TASKBARCREATED)
 		{
 			base.WndProc(ref m);
@@ -265,6 +341,10 @@ public class FenceWindow : Form
 			return;
 		}
 		base.WndProc(ref m);
+		// WM_NCHITTEST：在标题栏内返回 HTCAPTION，系统才会进入标准的窗口拖动流程
+		// （进而触发 WM_MOVING，辅助线吸附才有输入来源）。
+		// 原实现在 WM_MOUSEMOVE 里改写 m.Result，依赖光标已经在移动时才生效，
+		// 按下即拖的正常操作反而可能进不了移动循环。
 		if (Control.MouseButtons != MouseButtons.Right && !lockedToolStripMenuItem.Checked && m.Msg == 132)
 		{
 			Point point = PointToClient(new Point(m.LParam.ToInt32()));
@@ -273,6 +353,16 @@ public class FenceWindow : Form
 			{
 				m.Result = (IntPtr)2;
 				FenceWindow_MouseEnter(null, null);
+			}
+			if (point.Y < titleHeight)
+			{
+				// 标题栏：先让出图标区域，其余部分交给系统拖动
+				if (!IsPointOverIcon(point))
+				{
+					m.Result = (IntPtr)2;
+					FenceWindow_MouseEnter(null, null);
+					return;
+				}
 			}
 			if (point.X < num2 && point.Y < num2)
 			{
@@ -307,12 +397,95 @@ public class FenceWindow : Form
 
 	private void exitToolStripMenuItem_Click(object sender, EventArgs e)
 	{
-		if (MessageBox.Show(this, "Really remove this fence?", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+		if (MessageBox.Show(this, "确定要删除这个围栏吗？\n围栏内的项目记录将一并移除。", "删除围栏", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 		{
 			FenceManager.Instance.RemoveFence(fenceInfo);
 			allowClose = true;
 			Close();
 		}
+	}
+
+	// ---- 内联双击标题改名 ----
+
+	private void BeginRenameTitle()
+	{
+		if (titleEditBox != null)
+			return;
+		string oldName = Text;
+		titleEditBox = new TextBox
+		{
+			Text = oldName,
+			Font = titleFont,
+			TextAlign = HorizontalAlignment.Center,
+			BorderStyle = BorderStyle.None,
+			BackColor = Theme.TitleBackground,
+			ForeColor = Theme.TextPrimary,
+			Bounds = new Rectangle(0, 0, base.Width, titleHeight),
+			Multiline = false,
+			TabStop = false
+		};
+		titleEditBox.KeyDown += TitleEditBox_KeyDown;
+		titleEditBox.LostFocus += TitleEditBox_LostFocus;
+		base.Controls.Add(titleEditBox);
+		titleEditBox.BringToFront();
+		base.Activate();
+		titleEditBox.Focus();
+		titleEditBox.SelectAll();
+		Invalidate();
+		DiagLog.Log("开始重命名标题: '" + oldName + "' focused=" + titleEditBox.Focused + " foreground=" + base.Focused);
+	}
+
+	private void TitleEditBox_KeyDown(object sender, KeyEventArgs e)
+	{
+		if (e.KeyCode == Keys.Enter)
+		{
+			SaveTitleEdit();
+			e.Handled = true;
+			e.SuppressKeyPress = true;
+		}
+		else if (e.KeyCode == Keys.Escape)
+		{
+			CancelTitleEdit();
+			e.Handled = true;
+			e.SuppressKeyPress = true;
+		}
+	}
+
+	private void TitleEditBox_LostFocus(object sender, EventArgs e)
+	{
+		// 延到当前事件之后再收起，避免在 LostFocus 调用栈内销毁自身控件。
+		base.BeginInvoke(delegate { SaveTitleEdit(); });
+	}
+
+	private void SaveTitleEdit()
+	{
+		TextBox box = titleEditBox;
+		if (box == null)
+			return;
+		titleEditBox = null;
+		string newName = box.Text?.Trim();
+		string oldName = Text;
+		if (!string.IsNullOrEmpty(newName) && newName != oldName)
+		{
+			Text = newName;
+			fenceInfo.Name = newName;
+			Save();
+			DiagLog.Log("标题已保存: '" + oldName + "' -> '" + newName + "'");
+		}
+		base.Controls.Remove(box);
+		box.Dispose();
+		Invalidate();
+	}
+
+	private void CancelTitleEdit()
+	{
+		TextBox box = titleEditBox;
+		if (box == null)
+			return;
+		titleEditBox = null;
+		base.Controls.Remove(box);
+		box.Dispose();
+		Invalidate();
 	}
 
 	private void deleteItemToolStripMenuItem_Click(object sender, EventArgs e)
@@ -428,6 +601,7 @@ public class FenceWindow : Form
 	{
 		if (!initialized)
 			return;
+		UpdateRoundedRegion();
 		throttledResize.Run(delegate
 		{
 			fenceInfo.Width = (int)Math.Round((float)base.Width / s);
@@ -435,6 +609,20 @@ public class FenceWindow : Form
 			Save();
 		});
 		Invalidate();
+	}
+
+	// 用 Region 抠掉四角，让圆角外的部分真正透明（配合 TransparencyKey）。
+	private void UpdateRoundedRegion()
+	{
+		Region previous = base.Region;
+		base.Region = new Region(CreateRoundedRegion(base.Width, base.Height, S(Theme.CornerRadius)));
+		previous?.Dispose();
+	}
+
+	private static GraphicsPath CreateRoundedRegion(int width, int height, int radius)
+	{
+		Rectangle bounds = new Rectangle(0, 0, Math.Max(1, width), Math.Max(1, height));
+		return Theme.CreateRoundedRect(bounds, Math.Min(radius, Math.Min(width, height) / 2));
 	}
 
 	private void FenceWindow_MouseMove(object sender, MouseEventArgs e)
@@ -476,6 +664,7 @@ public class FenceWindow : Form
 		{
 			isMinified = false;
 			base.Height = prevHeight;
+			UpdateRoundedRegion();
 		}
 	}
 
@@ -493,6 +682,8 @@ public class FenceWindow : Form
 			isMinified = true;
 			prevHeight = base.Height;
 			base.Height = titleHeight;
+			// 折叠会改变窗体高度，圆角 Region 需同步重算
+			UpdateRoundedRegion();
 			Refresh();
 		}
 	}
@@ -514,8 +705,19 @@ public class FenceWindow : Form
 		Refresh();
 	}
 
+	protected override void OnDoubleClick(EventArgs e)
+	{
+		base.OnDoubleClick(e);
+	}
+
 	private void FenceWindow_DoubleClick(object sender, EventArgs e)
 	{
+		MouseEventArgs args = e as MouseEventArgs;
+		if (args != null && args.Y < titleHeight && !lockedToolStripMenuItem.Checked)
+		{
+			BeginRenameTitle();
+			return;
+		}
 		string item = hoveringItem;
 		if (!string.IsNullOrEmpty(item))
 		{
@@ -532,20 +734,51 @@ public class FenceWindow : Form
 		graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 		graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
 		graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-		graphics.SmoothingMode = SmoothingMode.HighQuality;
-		using (SolidBrush backgroundBrush = new SolidBrush(Color.FromArgb(110, Color.Black)))
-		using (SolidBrush titleBrush = new SolidBrush(Color.FromArgb(55, Color.Black)))
+		graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+		// 圆角面板：整窗按圆角裁剪，四角露出桌面而不是硬直角。
+		// DropShadow 已在 Win32 层加了投影，这里只负责表面。
+		Rectangle panelBounds = new Rectangle(0, 0, base.Width, base.Height);
+		int corner = S(Theme.CornerRadius);
+		GraphicsState panelState = graphics.Save();
 		{
-			graphics.FillRectangle(backgroundBrush, base.ClientRectangle);
-			graphics.FillRectangle(titleBrush, new Rectangle(0, 0, base.Width, titleHeight));
+			using (GraphicsPath panelPath = Theme.CreateRoundedRect(panelBounds, corner))
+				graphics.SetClip(panelPath, CombineMode.Intersect);
+			Theme.FillRoundedRect(graphics, panelBounds, corner, Theme.PanelBackground, Theme.PanelAlpha);
+
+			// 标题栏：底部与内容区之间加一条极淡的分隔线，形成层次。
+			Rectangle titleBounds = new Rectangle(0, 0, base.Width, titleHeight);
+			Theme.FillRoundedRect(graphics, titleBounds, corner, Theme.TitleBackground, Theme.TitleAlpha);
+			// 用方形补丁把标题栏下缘两角的圆角补平，避免出现缺口。
+			using (SolidBrush titlePatch = new SolidBrush(Color.FromArgb(Theme.TitleAlpha, Theme.TitleBackground)))
+				graphics.FillRectangle(titlePatch, 0, titleHeight - S(2), base.Width, S(2));
+
+			// 标题文字：左侧留出拖拽把手的小圆点，视觉上表明标题栏可拖动。
+			using (SolidBrush gripBrush = new SolidBrush(Color.FromArgb(120, Theme.TextSecondary)))
+			{
+				int gripY = titleHeight / 2;
+				for (int i = -1; i <= 1; i++)
+					graphics.FillEllipse(gripBrush, S(8), gripY + i * S(3) - S(1), S(2), S(2));
+			}
+			if (titleEditBox == null)
+			{
+				Rectangle textRect = new Rectangle(S(16), titleOffset, base.Width - S(32), titleHeight - titleOffset);
+				TextRenderer.DrawText(graphics, Text, titleFont, textRect, Theme.TextPrimary,
+					TextFormatFlags.EndEllipsis | TextFormatFlags.HorizontalCenter
+					| TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+			}
 		}
-		TextRenderer.DrawText(graphics, Text, titleFont, new Rectangle(0, titleOffset, base.Width, titleHeight - titleOffset), Color.White, TextFormatFlags.EndEllipsis | TextFormatFlags.HorizontalCenter | TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter);
+		graphics.Restore(panelState);
+
+		// 面板描边画在最上层，避免内容贴边时被裁掉
+		Theme.DrawRoundedRect(graphics, Rectangle.Inflate(panelBounds, -1, -1), corner, Theme.PanelBorder, 255, S(Theme.BorderWidth));
+
 		int num = itemPadding;
 		int num2 = itemPadding;
 		scrollHeight = 0;
 		RefreshRenderedItems();
 		GraphicsState contentState = graphics.Save();
-		graphics.SetClip(new Rectangle(0, titleHeight, base.Width, Math.Max(0, base.Height - titleHeight)));
+		graphics.SetClip(new Rectangle(S(1), titleHeight, base.Width - S(2), Math.Max(0, base.Height - titleHeight - S(1))));
 		foreach (RenderedItem item in renderedItems)
 		{
 			RenderEntry(graphics, item.Entry, num, num2 + titleHeight - scrollOffset);
@@ -565,9 +798,15 @@ public class FenceWindow : Form
 		if (scrollHeight > 0)
 		{
 			int num4 = base.Height - titleHeight - scrollHeight;
-			using SolidBrush scrollBrush = new SolidBrush(Color.FromArgb(150, Color.Black));
-			graphics.FillRectangle(scrollBrush, new Rectangle(base.Width - S(5), titleHeight + scrollOffset, S(5), num4));
-			scrollOffset = Math.Min(scrollOffset, scrollHeight);
+			// 细滚动条：轨道半透明，滑块用强调色，端部做圆角
+			int trackW = S(4);
+			int trackX = base.Width - trackW - S(2);
+			using (SolidBrush trackBrush = new SolidBrush(Color.FromArgb(40, 0, 0, 0)))
+				graphics.FillRectangle(trackBrush, trackX, titleHeight, trackW, Math.Max(0, base.Height - titleHeight));
+			int thumbH = Math.Max(S(24), (int)((float)(base.Height - titleHeight) * (base.Height - titleHeight)
+				/ (float)((base.Height - titleHeight) + scrollHeight)));
+			Theme.FillRoundedRect(graphics, new Rectangle(trackX, titleHeight + scrollOffset, trackW, thumbH),
+				trackW / 2, Theme.Accent, 190);
 		}
 		DrawDropIndicator(graphics);
 		graphics.Restore(contentState);
@@ -642,27 +881,24 @@ public class FenceWindow : Form
 			shouldUpdateSelection = false;
 			hasSelectionUpdated = true;
 		}
-		if (selectedItem == entry.Path)
+		// 悬停/选中统一用圆角卡片：hover 用强调色浅底，选中用强调色描边+更实底
+		bool isSelected = selectedItem == entry.Path;
+		int cardRadius = S(6);
+		if (isSelected)
 		{
-			Color color = (flag ? Color.FromArgb(110, SystemColors.GradientActiveCaption) : Color.FromArgb(80, SystemColors.GradientInactiveCaption));
-			using Pen borderPen = new Pen(Color.FromArgb(130, SystemColors.ActiveBorder));
-			using SolidBrush selectionBrush = new SolidBrush(color);
-			g.DrawRectangle(borderPen, Rectangle.Inflate(rect, -1, -1));
-			g.FillRectangle(selectionBrush, rect);
+			Theme.FillRoundedRect(g, rect, cardRadius, Theme.Accent, 150);
+			Theme.DrawRoundedRect(g, rect, cardRadius, Theme.Accent, 255, S(1));
 		}
 		else if (flag)
 		{
-			using Pen borderPen = new Pen(Color.FromArgb(130, SystemColors.ActiveBorder));
-			using SolidBrush hoverBrush = new SolidBrush(Color.FromArgb(80, SystemColors.ActiveCaption));
-			g.DrawRectangle(borderPen, Rectangle.Inflate(rect, -1, -1));
-			g.FillRectangle(hoverBrush, rect);
+			Theme.FillRoundedRect(g, rect, cardRadius, Theme.AccentSoft, 140);
 		}
 		if (bitmap != null)
 		{
 			g.DrawImage(bitmap, x + (itemWidth - iconBox) / 2, y, iconBox, iconBox);
 		}
 		TextFormatFlags flags = TextFormatFlags.EndEllipsis | TextFormatFlags.HorizontalCenter | TextFormatFlags.TextBoxControl | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding;
-		TextRenderer.DrawText(g, name, iconFont, bounds, Color.White, flags);
+		TextRenderer.DrawText(g, name, iconFont, bounds, Theme.TextSecondary, flags);
 		if (ownsBitmap)
 			bitmap?.Dispose();
 	}
@@ -681,13 +917,14 @@ public class FenceWindow : Form
 
 	private void newFenceToolStripMenuItem_Click(object sender, EventArgs e)
 	{
-		FenceManager.Instance.CreateFence("New fence");
+		FenceManager.Instance.CreateFence("新建围栏");
 	}
 
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
-		DiagLog.Log("OnFormClosing: fence='" + ((fenceInfo != null) ? fenceInfo.Name : "?") + "' reason=" + e.CloseReason.ToString() + " allowClose=" + allowClose);
-		if (!allowClose && e.CloseReason != CloseReason.WindowsShutDown)
+		bool appExiting = TrayController.ShuttingDown;
+		DiagLog.Log("OnFormClosing: fence='" + ((fenceInfo != null) ? fenceInfo.Name : "?") + "' reason=" + e.CloseReason.ToString() + " allowClose=" + allowClose + " appExiting=" + appExiting);
+		if (!allowClose && !appExiting && e.CloseReason != CloseReason.WindowsShutDown)
 		{
 			DiagLog.Log("  -> 已拦截外部关闭(" + e.CloseReason.ToString() + ")，窗口保持");
 			e.Cancel = true;
@@ -701,12 +938,13 @@ public class FenceWindow : Form
 
 	private void FenceWindow_FormClosed(object sender, FormClosedEventArgs e)
 	{
-		DiagLog.Log("FormClosed: '" + ((fenceInfo != null) ? fenceInfo.Name : "?") + "' 剩余OpenForms=" + Application.OpenForms.Count);
-		if (Application.OpenForms.Count == 0)
-		{
-			DiagLog.Log("  -> 已无打开窗口，调用 Application.Exit()");
-			Application.Exit();
-		}
+		TrayController.Unregister(this);
+		SnapManager.Unregister(base.Handle);
+		// 最后一个围栏关闭时收起辅助线覆盖层
+		snapOverlay.Hide();
+		DiagLog.Log("FormClosed: '" + ((fenceInfo != null) ? fenceInfo.Name : "?") + "' 剩余OpenForms=" + Application.OpenForms.Count + " 退出中=" + TrayController.ShuttingDown);
+		// 不再因"窗口全部关闭"而结束进程：托盘常驻，围栏可用托盘重新显示或新建。
+		// 移除围栏(Remove Fence)只影响单个围栏；Application.Exit() 现仅由 TrayController.ExitApplication 触发。
 	}
 
 	private void Save()
@@ -716,6 +954,104 @@ public class FenceWindow : Form
 			FenceManager.Instance.UpdateFence(fenceInfo);
 		}
 	}
+
+	/// <summary>
+	/// 把围栏移动/缩放到指定屏幕矩形（物理像素），并持久化。
+	/// 供托盘的自动排布与分辨率变化后的重新适配使用。
+	/// </summary>
+	public void ApplyLayout(Rectangle bounds)
+	{
+		base.Location = new Point(bounds.X, bounds.Y);
+		base.Width = Math.Max(S(160), bounds.Width);
+		base.Height = Math.Max(S(120), bounds.Height);
+		// 折叠状态下不要把高度撑开，保持折叠语义
+		if (isMinified)
+			base.Height = titleHeight;
+
+		fenceInfo.PosX = (int)Math.Round((float)base.Location.X / s);
+		fenceInfo.PosY = (int)Math.Round((float)base.Location.Y / s);
+		fenceInfo.Width = (int)Math.Round((float)base.Width / s);
+		fenceInfo.Height = (int)Math.Round((float)(isMinified ? prevHeight : base.Height) / s);
+		fenceInfo.ScreenX = Screen.PrimaryScreen?.Bounds.Width ?? fenceInfo.ScreenX;
+		fenceInfo.ScreenY = Screen.PrimaryScreen?.Bounds.Height ?? fenceInfo.ScreenY;
+		fenceInfo.NeedsRelayout = false;
+
+		UpdateRoundedRegion();
+		Save();
+		Invalidate();
+	}
+
+	/// <summary>解除折叠，使围栏回到完整高度（自动排布前需要）。</summary>
+	public void EnsureExpanded()
+	{
+		if (!isMinified)
+			return;
+		isMinified = false;
+		base.Height = prevHeight;
+		UpdateRoundedRegion();
+	}
+
+	/// <summary>该围栏记录的创建时屏幕宽度，供分辨率自适应判断使用。</summary>
+	public int FenceScreenWidth => fenceInfo.ScreenX;
+
+	/// <summary>当前围栏在屏幕上的矩形（含边框），用于对齐计算。</summary>
+	private Rectangle GetScreenBounds()
+	{
+		return base.Bounds;
+	}
+
+	/// <summary>
+	/// 处理拖动中的对齐吸附：计算需要的偏移，写回 RECT 并显示辅助线。
+	/// </summary>
+	private void HandleMoving(IntPtr rectPointer)
+	{
+		if (rectPointer == IntPtr.Zero || lockedToolStripMenuItem.Checked)
+		{
+			snapOverlay.Hide();
+			return;
+		}
+
+		try
+		{
+		Rectangle moving = (Rectangle)Marshal.PtrToStructure(rectPointer, typeof(Rectangle));
+			SnapResult snap = SnapManager.Calculate(moving, base.Handle, Screen.FromHandle(base.Handle).WorkingArea);
+			if (!snap.HasSnap)
+			{
+				snapOverlay.Hide();
+				return;
+			}
+
+			// 修正 RECT：X/Y 加上吸附偏移，并把结果写回驱动移动循环
+			Rectangle snapped = Rectangle.FromLTRB(
+				moving.Left + snap.DeltaX,
+				moving.Top + snap.DeltaY,
+				moving.Right + snap.DeltaX,
+				moving.Bottom + snap.DeltaY);
+
+			Marshal.StructureToPtr(snapped, rectPointer, false);
+
+			// 辅助线用屏幕坐标；覆盖层与围栏都位于桌面坐标系，可直接绘制
+			snapOverlay.Show(snap.Guides);
+		}
+		catch (Exception ex)
+		{
+			DiagLog.Log("对齐吸附计算失败: " + ex.Message);
+			snapOverlay.Hide();
+		}
+	}
+
+	/// <summary>拖动结束（鼠标释放）后隐藏辅助线。</summary>
+	private void FenceWindow_MouseCaptureChanged(object sender, EventArgs e)
+	{
+		if (!base.Capture)
+			snapOverlay.Hide();
+	}
+
+	/// <summary>该围栏记录的创建时屏幕高度。</summary>
+	public int FenceScreenHeight => fenceInfo.ScreenY;
+
+	/// <summary>是否因分辨率变化而需要重新适配。</summary>
+	public bool NeedsRelayout => fenceInfo.NeedsRelayout;
 
 	private void FenceWindow_LocationChanged(object sender, EventArgs e)
 	{
@@ -753,6 +1089,7 @@ public class FenceWindow : Form
 			{
 				base.Height = titleHeight;
 			}
+			UpdateRoundedRegion();
 			Refresh();
 			Save();
 		}
@@ -790,6 +1127,16 @@ public class FenceWindow : Form
 	private void FenceWindow_MouseUp(object sender, MouseEventArgs e)
 	{
 		dragCandidateItem = null;
+	}
+
+	/// <summary>该点是否落在某个图标上。标题栏里也要留出图标区，让用户可以拖动图标。</summary>
+	private bool IsPointOverIcon(Point point)
+	{
+		// 图标网格从标题栏下方开始，标题栏内理论上没有图标；
+		// 这里仍做一次判定，保证拖动标题与拖动图标的边界清晰。
+		if (point.Y < titleHeight)
+			return false;
+		return HitTestItem(point) != null;
 	}
 
 	private string HitTestItem(Point point)
@@ -879,7 +1226,12 @@ public class FenceWindow : Form
 		int row = visualIndex / columns;
 		int x = itemPadding + column * (itemWidth + itemPadding) - S(3);
 		int y = titleHeight + itemPadding + row * (ItemPhysicalHeight() + itemPadding) - scrollOffset;
-		using Pen pen = new Pen(Color.FromArgb(230, SystemColors.Highlight), Math.Max(2, S(2)));
+		// 插入指示线用强调色并带端点圆头，与整体视觉统一
+		using Pen pen = new Pen(Color.FromArgb(240, Theme.Accent), Math.Max(2, S(2)))
+		{
+			StartCap = LineCap.Round,
+			EndCap = LineCap.Round
+		};
 		graphics.DrawLine(pen, x, y, x, y + ItemPhysicalHeight());
 	}
 
@@ -1073,7 +1425,9 @@ public class FenceWindow : Form
 		this.exitToolStripMenuItem.Click += new System.EventHandler(exitToolStripMenuItem_Click);
 		resources.ApplyResources(this, "$this");
 		base.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-		this.BackColor = System.Drawing.Color.Black;
+		// 圆角由 Region 裁出真实透明的四角，因此不需要 TransparencyKey；
+		// 使用 TransparencyKey 会连阴影里的黑色像素一起抠掉，反而破坏投影。
+		this.BackColor = Theme.PanelBackground;
 		this.DoubleBuffered = true;
 		this.ForeColor = System.Drawing.SystemColors.ControlText;
 		base.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;

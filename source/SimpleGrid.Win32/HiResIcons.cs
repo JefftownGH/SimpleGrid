@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using SimpleGrid.Util;
 
 namespace SimpleGrid.Win32;
 
@@ -63,7 +64,13 @@ public static class HiResIcons
 
 	private static readonly Guid IID_IImageList = new Guid("46EB5926-582E-4017-9FDF-E8998DAA0950");
 
-	private static readonly Dictionary<string, Dictionary<int, Bitmap>> Cache = new Dictionary<string, Dictionary<int, Bitmap>>(StringComparer.OrdinalIgnoreCase);
+	/// <summary>
+	/// 图标缓存上限。原先是无上限 Dictionary，图标随拖入项目数无限增长且永不释放
+	/// （每个 Bitmap 都持有 GDI 句柄），长时间使用会耗尽 GDI 资源。
+	/// </summary>
+	private const int MaxCacheEntries = 512;
+
+	private static readonly LruCache<string, Bitmap> Cache = new LruCache<string, Bitmap>(MaxCacheEntries);
 
 	private static readonly object CacheLock = new object();
 	private static readonly HashSet<string> Pending = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -87,28 +94,40 @@ public static class HiResIcons
 			pixelSize = 8;
 		}
 		string requestKey = path + "\0" + pixelSize;
-		Bitmap result;
-		bool shouldQueue = false;
+
+		// LruCache 自带锁，这里只在「是否需要排后台任务」上用 CacheLock 保护 Pending
+		Bitmap cached = Cache.TryGet(requestKey);
+		if (cached != null)
+			return cached;
+
+		bool shouldQueue;
 		lock (CacheLock)
 		{
-			if (!Cache.TryGetValue(path, out var value))
-			{
-				value = new Dictionary<int, Bitmap>();
-				Cache[path] = value;
-			}
-			if (value.TryGetValue(pixelSize, out var value2) && value2 != null)
-			{
-				return value2;
-			}
-			using Bitmap placeholder = SystemIcons.Application.ToBitmap();
-			result = ScaleBitmap(placeholder, pixelSize);
-			value[pixelSize] = result;
 			shouldQueue = Pending.Add(requestKey);
 		}
+
+		// 先占位返回，保证 UI 当帧就能画出图标；真实图标由后台任务回填
+		Bitmap placeholder = CreatePlaceholder(pixelSize);
+		Cache.Replace(requestKey, placeholder);
 		if (shouldQueue)
 			QueueBuild(path, isFolder, pixelSize, requestKey);
-		return result;
+		return placeholder;
 	}
+
+	private static Bitmap CreatePlaceholder(int pixelSize)
+	{
+		using Bitmap systemIcon = SystemIcons.Application.ToBitmap();
+		return ScaleBitmap(systemIcon, pixelSize);
+	}
+
+	/// <summary>清空图标缓存，释放全部 GDI 句柄。围栏全部关闭时可调用。</summary>
+	public static void ClearCache()
+	{
+		Cache.Clear();
+	}
+
+	/// <summary>当前缓存条目数，供诊断使用。</summary>
+	public static int CacheCount => Cache.Count;
 
 	private static void QueueBuild(string path, bool isFolder, int pixelSize, string requestKey)
 	{
@@ -118,11 +137,10 @@ public static class HiResIcons
 			try
 			{
 				Bitmap loaded = Build(path, isFolder, pixelSize);
+				// Replace 内部会 Dispose 旧的占位图，无需在此重复释放
+				Cache.Replace(requestKey, loaded);
 				lock (CacheLock)
 				{
-					Bitmap oldBitmap = Cache[path][pixelSize];
-					Cache[path][pixelSize] = loaded;
-					oldBitmap?.Dispose();
 					Pending.Remove(requestKey);
 				}
 				IconLoaded?.Invoke(null, EventArgs.Empty);

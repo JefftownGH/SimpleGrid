@@ -11,15 +11,20 @@ namespace SimpleGrid.Util;
 
 public sealed class ThumbnailProvider : IDisposable
 {
-	private sealed class ThumbnailState
-	{
-		public Icon Icon;
-	}
-
 	private static readonly string[] SupportedExtensions = new string[7] { ".bmp", ".gif", ".jpg", ".jpeg", ".png", ".tiff", ".tif" };
 	private static readonly SemaphoreSlim LoadGate = new SemaphoreSlim(2);
+
+	/// <summary>缩略图缓存上限。原先无上限，Icon 长期累积不释放。</summary>
+	private const int MaxCacheEntries = 256;
+
 	private readonly object cacheLock = new object();
-	private readonly IDictionary<string, ThumbnailState> iconCache = new Dictionary<string, ThumbnailState>(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// 缩略图缓存。用 LruCache 限制容量，淘汰时自动 Dispose 图标，
+	/// 避免长期使用后 GDI 句柄耗尽。
+	/// </summary>
+	private readonly LruCache<string, Icon> iconCache = new LruCache<string, Icon>(MaxCacheEntries);
+
 	private bool disposed;
 
 	public event EventHandler IconThumbnailLoaded;
@@ -31,26 +36,27 @@ public sealed class ThumbnailProvider : IDisposable
 
 	public Icon GenerateThumbnail(string path)
 	{
-		lock (cacheLock)
-		{
-			if (disposed)
-				return (Icon)SystemIcons.Application.Clone();
-			if (!iconCache.TryGetValue(path, out ThumbnailState state))
-			{
-				state = new ThumbnailState { Icon = (Icon)SystemIcons.Application.Clone() };
-				iconCache[path] = state;
-				SubmitGeneratorTask(path, state);
-			}
-			return (Icon)state.Icon.Clone();
-		}
+		Icon cached = iconCache.TryGet(path);
+		if (cached != null)
+			return (Icon)cached.Clone();
+
+		if (disposed)
+			return (Icon)SystemIcons.Application.Clone();
+
+		// 先用系统图标占位，保证 UI 当帧可绘制；真实缩略图后台生成后回填
+		Icon placeholder = (Icon)SystemIcons.Application.Clone();
+		iconCache.Replace(path, placeholder);
+		SubmitGeneratorTask(path);
+		return (Icon)placeholder.Clone();
 	}
 
-	private void SubmitGeneratorTask(string path, ThumbnailState state)
+	private void SubmitGeneratorTask(string path)
 	{
 		Task.Run(async delegate
 		{
 			await LoadGate.WaitAsync().ConfigureAwait(false);
 			Icon loadedIcon = null;
+			bool applied = false;
 			try
 			{
 				using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -66,19 +72,16 @@ public sealed class ThumbnailProvider : IDisposable
 					DestroyIcon(handle);
 				}
 
-				EventHandler handler = null;
 				lock (cacheLock)
 				{
-					if (!disposed && iconCache.TryGetValue(path, out ThumbnailState current) && ReferenceEquals(current, state))
+					// 已 Dispose 时不写入，直接丢弃；Replace 会释放旧占位图标
+					if (!disposed)
 					{
-						Icon oldIcon = state.Icon;
-						state.Icon = loadedIcon;
+						iconCache.Replace(path, loadedIcon);
 						loadedIcon = null;
-						oldIcon?.Dispose();
-						handler = IconThumbnailLoaded;
+						applied = true;
 					}
 				}
-				handler?.Invoke(this, EventArgs.Empty);
 			}
 			catch
 			{
@@ -88,6 +91,9 @@ public sealed class ThumbnailProvider : IDisposable
 				loadedIcon?.Dispose();
 				LoadGate.Release();
 			}
+
+			if (applied)
+				IconThumbnailLoaded?.Invoke(this, EventArgs.Empty);
 		});
 	}
 
@@ -98,8 +104,7 @@ public sealed class ThumbnailProvider : IDisposable
 			if (disposed)
 				return;
 			disposed = true;
-			foreach (ThumbnailState state in iconCache.Values)
-				state.Icon?.Dispose();
+			// LruCache.Clear 会 Dispose 每个缓存图标
 			iconCache.Clear();
 			IconThumbnailLoaded = null;
 		}

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -33,7 +33,7 @@ ZW0uRHJhd2luZy5Qb2ludAIAAAABeAF5AAAICAIAAABAAQAAOwAAAAs=</value></data><data nam
   <data name="&gt;&gt;btnOk.Name" xml:space="preserve"><value>btnOk</value></data>
   <data name="lbName.TabIndex" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><value>0</value></data>
   <data name="&gt;&gt;tbName.ZOrder" xml:space="preserve"><value>2</value></data>
-  <data name="$this.Text" xml:space="preserve"><value>Rename</value></data>
+  <data name="$this.Text" xml:space="preserve"><value>重命名</value></data>
   <data name="&gt;&gt;lbName.Name" xml:space="preserve"><value>lbName</value></data>
   <data name="&gt;&gt;lbName.Type" xml:space="preserve"><value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
   <data name="&gt;&gt;lbName.Parent" xml:space="preserve"><value>$this</value></data>
@@ -43,7 +43,7 @@ dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
 ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAAIQBAABgAAAACw==</value></data><data name="&gt;&gt;btnCancel.Parent" xml:space="preserve"><value>$this</value></data>
   <data name="&gt;&gt;tbName.Parent" xml:space="preserve"><value>$this</value></data>
   <data name="btnCancel.TabIndex" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><value>3</value></data>
-  <data name="btnCancel.Text" xml:space="preserve"><value>Cancel</value></data>
+  <data name="btnCancel.Text" xml:space="preserve"><value>取消</value></data>
   <data name="btnCancel.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
 ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAADgAAAAVAAAACw==</value></data><data name="tbName.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
@@ -53,12 +53,12 @@ ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAABkBAAAVAAAACw==</value></da
   <data name="tbName.TabIndex" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><value>1</value></data>
   <data name="btnOk.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
-ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAADgAAAAVAAAACw==</value></data><data name="btnOk.Text" xml:space="preserve"><value>OK</value></data>
+ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAADgAAAAVAAAACw==</value></data><data name="btnOk.Text" xml:space="preserve"><value>确定</value></data>
   <data name="btnOk.Location" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABRTeXN0
 ZW0uRHJhd2luZy5Qb2ludAIAAAABeAF5AAAICAIAAAACAQAAOwAAAAs=</value></data><data name="lbName.Size" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABNTeXN0
-ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAACMAAAAMAAAACw==</value></data><data name="lbName.Text" xml:space="preserve"><value>Name:</value></data>
+ZW0uRHJhd2luZy5TaXplAgAAAAV3aWR0aAZoZWlnaHQAAAgIAgAAACMAAAAMAAAACw==</value></data><data name="lbName.Text" xml:space="preserve"><value>名称：</value></data>
   <data name="lbName.Location" mimetype="application/x-microsoft.net.object.binary.base64"><value>AAEAAAD/////AQAAAAAAAAAMAgAAAFFTeXN0ZW0uRHJhd2luZywgVmVyc2lvbj00LjAuMC4wLCBD
 dWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWIwM2Y1ZjdmMTFkNTBhM2EFAQAAABRTeXN0
 ZW0uRHJhd2luZy5Qb2ludAIAAAABeAF5AAAICAIAAAAaAAAAGQAAAAs=</value></data><data name="lbName.AutoSize" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><value>True</value></data>

@@ -70,7 +70,7 @@ SimpleGrid（简单格子）用半透明格子整理桌面上的程序快捷方�
 - 运行预编译版本时需要 .NET Framework 4.8。
 - 从源码构建时需要 .NET SDK 和 .NET Framework 4.8 Developer Pack。
 
-预编译版本可从 [GitHub Releases](https://github.com/followdd/SimpleGrid/releases) 下载；当前稳定版本为 [v1.0.0](https://github.com/followdd/SimpleGrid/releases/tag/v1.0.0)。也可以按下方步骤从源码构建。
+预编译版本可从 [GitHub Releases](https://github.com/JefftownGH/SimpleGrid/releases) 下载；当前稳定版本为 [v1.0.0](https://github.com/JefftownGH/SimpleGrid/releases/tag/v1.0.0)。也可以按下方步骤从源码构建。
 
 ## 从源码构建
 
@@ -216,7 +216,7 @@ See [docs/UPSTREAM-DIFFERENCES.md](docs/UPSTREAM-DIFFERENCES.md) for the complet
 - .NET Framework 4.8 for the prebuilt version.
 - .NET SDK and the .NET Framework 4.8 Developer Pack when building from source.
 
-Download the prebuilt application from [GitHub Releases](https://github.com/followdd/SimpleGrid/releases). The current stable release is [v1.0.0](https://github.com/followdd/SimpleGrid/releases/tag/v1.0.0). You can also build it from source as described below.
+Download the prebuilt application from [GitHub Releases](https://github.com/JefftownGH/SimpleGrid/releases). The current stable release is [v1.0.0](https://github.com/JefftownGH/SimpleGrid/releases/tag/v1.0.0). You can also build it from source as described below.
 
 ### Build from source
 
