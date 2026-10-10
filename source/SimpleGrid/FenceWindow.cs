@@ -349,20 +349,21 @@ public class FenceWindow : Form
 		{
 			Point point = PointToClient(new Point(m.LParam.ToInt32()));
 			int num2 = S(8);
+			// 顺序很重要：先让四边与四角的热区优先于标题栏拖动。
+			// 若在此之前就 return，顶部 8px 内会被判成 HTCAPTION 而无法拖动缩放。
+			bool overResizeZone = point.X < num2 || point.X > base.Width - num2
+				|| point.Y < num2 || point.Y > base.Height - num2;
+			if (point.Y < titleHeight && !overResizeZone && !IsPointOverIcon(point))
+			{
+				// 标题栏空白处：交给系统进入标准窗口拖动
+				m.Result = (IntPtr)2;
+				FenceWindow_MouseEnter(null, null);
+				return;
+			}
 			if ((int)m.Result == 1 && point.Y < titleHeight)
 			{
 				m.Result = (IntPtr)2;
 				FenceWindow_MouseEnter(null, null);
-			}
-			if (point.Y < titleHeight)
-			{
-				// 标题栏：先让出图标区域，其余部分交给系统拖动
-				if (!IsPointOverIcon(point))
-				{
-					m.Result = (IntPtr)2;
-					FenceWindow_MouseEnter(null, null);
-					return;
-				}
 			}
 			if (point.X < num2 && point.Y < num2)
 			{
@@ -391,6 +392,12 @@ public class FenceWindow : Form
 			else if (point.X > base.Width - num2)
 			{
 				m.Result = new IntPtr(11);
+			}
+			else if (point.Y < num2)
+			{
+				// 上边非角落区域。原始判定链缺少这一支，导致顶部边框无法拖动缩放，
+				// 会被上面的标题栏判定抢先命中 HTCAPTION。
+				m.Result = new IntPtr(12);
 			}
 		}
 	}
